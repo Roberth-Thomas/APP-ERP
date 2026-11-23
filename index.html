@@ -26,7 +26,7 @@
     // uma versão antiga. Se há cache "estudos-" de outra versão e nenhum desta, apaga tudo e recarrega (uma vez).
     // VERSAO_PAGINA anda junto com VERSAO do sw.js (o teste confere).
     (function () {
-      var VERSAO_PAGINA = 'estudos-v37';
+      var VERSAO_PAGINA = 'estudos-v39';
       if (!window.caches || !('serviceWorker' in navigator)) return;
       caches.keys().then(function (nomes) {
         var velhas = nomes.filter(function (n) { return n.indexOf('estudos-') === 0 && n !== VERSAO_PAGINA; });
@@ -49,7 +49,6 @@
     <div class="topo-acoes">
       <button id="indicador-nuvem" class="nuvem-indicador" hidden title="Status do Google Drive"></button>
       <a href="#caderno" class="botao-icone" aria-label="Caderno de anotações" title="Caderno de anotações"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v18M12 8h4M12 12h4"/></svg></a>
-      <a href="#config" class="botao-icone" aria-label="Configurações" title="Configurações"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg></a>
     </div>
   </header>
 
@@ -58,10 +57,10 @@
 
   <nav class="abas" aria-label="Navegação principal">
     <a href="#hoje" data-aba="hoje"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></span>Hoje</a>
-    <a href="#assuntos" data-aba="assuntos"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 5h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 5h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></svg></span>Assuntos</a>
-    <a href="#exercicios" data-aba="exercicios"><span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="m8 12 3 3 5-6"/></svg></span>Exercícios</a>
-    <a href="#redacao" data-aba="redacao"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span>Redação</a>
-    <a href="#progresso" data-aba="progresso"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg></span>Progresso</a>
+    <a href="#assuntos" data-aba="assuntos"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 5h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 5h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></svg></span>Estudar</a>
+    <a href="#exercicios" data-aba="exercicios"><span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="m8 12 3 3 5-6"/></svg></span>Praticar</a>
+    <a href="#simulados" data-aba="simulados"><span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg></span>Simulados</a>
+    <a href="#progresso" data-aba="progresso"><span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>Eu</a>
   </nav>
 
   <!-- Ordem importa: scripts comuns (sem type="module") para abrir com duplo clique, sem servidor -->
@@ -112,6 +111,7 @@
   <script src="js/telas/ingles.js"></script>
   <script src="js/telas/vestibular.js"></script>
   <script src="js/telas/enem.js"></script>
+  <script src="js/telas/simulados.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

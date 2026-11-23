@@ -21,6 +21,9 @@ O celular é o aparelho principal. Interface e comentários do código em pt-BR.
 - **Ordem dos scripts importa.** `index.html` carrega tudo com `<script>` em sequência: `util.js` → dados (`js/dados/*`, `topicos/*`)
   → `armazenamento.js`/`calculos.js` → `componentes.js`/`caderno.js` → `nuvem.js` → telas → `app.js` por último. Os dados se juntam por
   `Object.assign(App.dados.conteudos, {...})`, então um arquivo de tópico precisa vir depois de `conteudos.js`.
+- **Abas (barra de baixo)**: Hoje (`#hoje`) · Estudar (`#assuntos`) · Praticar (`#exercicios`) · Simulados (`#simulados`) · Eu (`#progresso`).
+  Telas sem aba própria dizem qual acender com `aba` (ex.: redação/caderno → assuntos, enem → simulados, config → progresso).
+  Visual das listas: classes `.tarefas`/`.tarefa` (linha com ícone, texto e ›), um só botão de destaque por tela, detalhes em `<details>`.
 - **Roteador por hash** (`js/app.js`): `#nome/param` chama `App.telas[nome].render(el, param)`; a tela pode ter `sair()` (salvar pendências),
   `titulo` e `aba` (qual aba acende). Cada tela registra os ouvintes em `el.onclick/onchange/...`, que o roteador zera ao trocar de tela.
 - **Estado único** em `App.store` (`js/armazenamento.js`): um objeto salvo em `localStorage['estudosapp:estado']`. Altere o objeto de
@@ -67,7 +70,7 @@ O celular é o aparelho principal. Interface e comentários do código em pt-BR.
 ## Próximos passos
 1. Preencher as questões reais do ENEM (`js/dados/vestibular.js`, hoje vazio), conferindo cada uma no PDF e no gabarito do Inep.
    Provas inteiras como simulado ficam em `js/dados/simulados-enem.js` (só gabarito, páginas e tema da redação; o caderno é o PDF do Inep)
-   e na tela `#enem` (js/telas/enem.js). Já entrou: 2026, 1º dia, caderno Azul, interativo (certeza/chute/ver a correta/por quê).
+   e na tela `#enem` (js/telas/enem.js), aberta pela aba Simulados (js/telas/simulados.js; FUVEST aparece como "Em breve"). Já entrou: 2026, 1º dia, caderno Azul, interativo (certeza/chute/ver a correta/por quê).
    Explicações próprias conferidas nas 90 questões (e nas duas línguas). Falta o 2º dia, quando o arquivo estiver disponível.
 2. Os demais tópicos de cada matéria, um por vez, com auditoria antes de mostrar.
 

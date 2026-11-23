@@ -1,7 +1,7 @@
 /* =========================================================
    telas/assuntos.js — checklist de assuntos por fase e matéria
    Rotas:
-     #assuntos            → grade de matérias (um ícone por matéria, com o progresso da fase)
+     #assuntos            → aba Estudar: matérias em grupos, inglês, redação e atalhos
      #assuntos/<materia>  → assuntos da matéria: marcar, estudar, adicionar, renomear e remover
    ========================================================= */
 App.telas = App.telas || {};
@@ -28,82 +28,124 @@ App.telas.assuntos = (function () {
   };
   const ICONE_PADRAO = '<path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/>';
   let faseEscolhida = null; // null = ainda não escolhida (usa a fase atual)
+  let editando = false;     // "Editar lista": mostra renomear, remover e adicionar
 
   function icone(materia) {
     return `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONES[materia] || ICONE_PADRAO}</svg>`;
   }
 
-  function cabecalho(estado, fase, titulo, voltar) {
+  /** Pílulas de fase + progresso da fase, numa linha compacta */
+  function seletorFase(estado, fase, soPilulas) {
     const prog = App.calc.progressoAssuntos(estado, null, fase);
     const pilulas = D.fases.map((f) =>
-      `<button class="pilula ${f.numero === fase ? 'ativa' : ''}" data-fase="${f.numero}">${f.nome}</button>`).join('');
+      `<button class="pilula ${f.numero === fase ? 'ativa' : ''}" data-fase="${f.numero}" role="tab" aria-selected="${f.numero === fase}">${f.nome}</button>`).join('');
     return `
-      <section class="cartao">
-        ${voltar ? '<a href="#assuntos" class="pequeno">← Todas as matérias</a>' : ''}
-        <div class="linha entre"><h1 style="margin:0">${titulo}</h1>
-          <span class="linha" style="gap:.4rem">
-            <a class="botao pequeno" href="#cursos">Cursos</a>
-            <a class="botao pequeno primario" href="#apostila">Apostilas</a>
-          </span></div>
-        <div class="pilulas" role="tablist">${pilulas}</div>
-        <p class="suave pequeno" style="margin-top:.6rem">${D.fases[fase - 1].descricao}</p>
-        ${voltar ? '' : `
-        <div class="item-barra">
-          <div class="linha"><span>Progresso da fase</span><strong>${prog.feitos}/${prog.total} · ${prog.pct}%</strong></div>
-          <div class="barra grossa"><div style="width:${prog.pct}%"></div></div>
+      <div class="estudar-fase">
+        <div class="pilulas" role="tablist" aria-label="Fase">${pilulas}</div>
+        ${soPilulas ? '' : `<div class="item-barra">
+          <div class="linha entre"><span class="suave pequeno">${U.esc(D.fases[fase - 1].descricao.split('·')[0].trim())}</span><strong class="pequeno">${prog.feitos}/${prog.total} · ${prog.pct}%</strong></div>
+          <div class="barra"><div style="width:${prog.pct}%"></div></div>
         </div>`}
-      </section>`;
+      </div>`;
   }
 
-  /* ---------- Grade de matérias ---------- */
+  /** Um bloco da grade. `href` muda para matérias com tela própria (inglês). */
+  function blocoMateria(estado, fase, m, href, sub) {
+    const itens = estado.assuntos.filter((a) => a.materia === m.id && a.fase === fase);
+    const feitos = itens.filter((a) => a.estudado).length;
+    const pct = U.porcentagem(feitos, itens.length);
+    const completo = itens.length && feitos === itens.length;
+    return `
+      <a class="materia-bloco ${completo ? 'completo' : ''}" href="${href || '#assuntos/' + U.esc(m.id)}">
+        <span class="materia-icone">${icone(m.id)}</span>
+        <span class="materia-nome">${U.esc(m.nome)}</span>
+        <span class="suave pequeno">${sub || (itens.length ? `${feitos} de ${itens.length}` : 'Sem assuntos')}</span>
+        <span class="barra"><span style="width:${pct}%"></span></span>
+      </a>`;
+  }
+
+  /** Linha de atalho (mesmo desenho da lista da tela Hoje) */
+  function atalho(svg, titulo, sub, href) {
+    return `
+      <li class="tarefa"><a href="${href}">
+        <span class="tarefa-icone"><svg viewBox="0 0 24 24" aria-hidden="true">${svg}</svg></span>
+        <span class="tarefa-texto"><strong>${titulo}</strong><small>${sub}</small></span>
+        <span class="tarefa-seta" aria-hidden="true">›</span>
+      </a></li>`;
+  }
+
+  /* ---------- Grade de matérias (aba Estudar) ---------- */
   function telaGrade(el, estado, fase) {
-    const blocos = D.materias.map((m) => {
-      const itens = estado.assuntos.filter((a) => a.materia === m.id && a.fase === fase);
-      const feitos = itens.filter((a) => a.estudado).length;
-      const pct = U.porcentagem(feitos, itens.length);
-      const completo = itens.length && feitos === itens.length;
-      return `
-        <a class="materia-bloco ${completo ? 'completo' : ''}" href="#assuntos/${U.esc(m.id)}">
-          <span class="materia-icone">${icone(m.id)}</span>
-          <span class="materia-nome">${U.esc(m.nome)}</span>
-          <span class="suave pequeno">${itens.length ? `${feitos} de ${itens.length}` : 'Sem assuntos'}${m.tipo === 'concurso' ? ' · concurso' : m.tipo === 'curso' ? ' · curso livre' : ''}</span>
-          <span class="barra"><span style="width:${pct}%"></span></span>
-        </a>`;
-    }).join('');
+    const grupo = (titulo, lista) => lista.length ? `
+      <h2 class="hoje-titulo estudar-grupo">${titulo}</h2>
+      <nav class="grade-materias" aria-label="${titulo}">${lista.join('')}</nav>` : '';
+    const base = [], concurso = [], extras = [];
+    D.materias.forEach((m) => {
+      if (m.tipo === 'concurso') concurso.push(blocoMateria(estado, fase, m));
+      else if (m.tipo === 'curso') extras.push(blocoMateria(estado, fase, m, null, 'Curso livre'));
+      else if (m.id === 'ingles') extras.unshift(blocoMateria(estado, fase, m, '#ingles', 'Trilha B1 → C1'));
+      else base.push(blocoMateria(estado, fase, m));
+    });
+    // Redação tem tela própria (plano de 12 semanas e escrita)
+    extras.splice(1, 0, `
+      <a class="materia-bloco" href="#redacao">
+        <span class="materia-icone">${ICONE_LAPIS}</span>
+        <span class="materia-nome">Redação</span>
+        <span class="suave pequeno">Plano de 12 semanas</span>
+      </a>`);
+
     el.innerHTML = `
-      ${cabecalho(estado, fase, 'Assuntos', false)}
-      <nav class="grade-materias" aria-label="Matérias">${blocos}</nav>`;
+      <div class="estudar">
+        <h1 class="estudar-h1">Estudar</h1>
+        ${seletorFase(estado, fase)}
+        ${grupo('Ensino médio', base)}
+        ${grupo('Concurso', concurso)}
+        ${grupo('Inglês, redação e cursos', extras)}
+        <h2 class="hoje-titulo estudar-grupo">Também</h2>
+        <ul class="tarefas cartao estudar-atalhos">
+          ${atalho('<path d="M4 4h6v16H4zM14 4h6v16h-6z"/>', 'Apostilas', 'Cada matéria como um livro', '#apostila')}
+          ${atalho('<rect x="3" y="5" width="18" height="12" rx="2"/><path d="m10 9 5 2-5 2z"/><path d="M8 21h8"/>', 'Meus cursos', 'Aulas de cursos de fora', '#cursos')}
+          ${atalho('<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v18M12 8h4M12 12h4"/>', 'Caderno', 'Suas anotações ligadas', '#caderno')}
+        </ul>
+      </div>`;
   }
 
   /* ---------- Uma matéria ---------- */
   function telaMateria(el, estado, fase, m) {
     const itens = estado.assuntos.filter((a) => a.materia === m.id && a.fase === fase);
     const feitos = itens.filter((a) => a.estudado).length;
+    const proximo = itens.find((a) => !a.estudado && D.conteudos[a.id]);
     const lis = itens.map((a) => `
       <li data-id="${U.esc(a.id)}">
         <input type="checkbox" data-acao="marcar" ${a.estudado ? 'checked' : ''} aria-label="Estudado: ${U.esc(a.titulo)}">
         ${D.conteudos[a.id]
           ? `<a class="assunto-titulo ${a.estudado ? 'feito' : ''}" href="#estudar/${U.esc(a.id)}">${U.esc(a.titulo)}<span aria-hidden="true">›</span></a>`
-          : `<span class="assunto-titulo ${a.estudado ? 'feito' : ''}">${U.esc(a.titulo)}</span>`}
-        <span class="acoes">
+          : `<span class="assunto-titulo ${a.estudado ? 'feito' : ''}">${U.esc(a.titulo)} <span class="suave pequeno">· sem apostila</span></span>`}
+        ${editando ? `<span class="acoes">
           <button data-acao="editar" title="Renomear" aria-label="Renomear ${U.esc(a.titulo)}">${ICONE_LAPIS}</button>
           <button data-acao="remover" title="Remover" aria-label="Remover ${U.esc(a.titulo)}">${ICONE_LIXO}</button>
-        </span>
+        </span>` : ''}
       </li>`).join('');
     el.innerHTML = `
-      ${cabecalho(estado, fase, `<span class="titulo-com-icone">${icone(m.id)}${U.esc(m.nome)}</span>`, true)}
-      <section class="cartao">
-        <div class="materia-titulo">
-          <span class="suave pequeno">Toque no nome do tópico para estudar.</span>
-          <span class="selo ${itens.length && feitos === itens.length ? 'ok' : 'info'}">${feitos}/${itens.length}</span>
-        </div>
-        ${m.id === 'ingles' ? '<a class="pequeno" href="#ingles">Abrir a trilha de inglês (níveis, cartões e nivelamento) →</a>' : ''}
-        <ul class="lista-assuntos">${lis || '<li class="suave pequeno">Nenhum assunto desta matéria nesta fase.</li>'}</ul>
-        <form class="form-inline" data-materia="${m.id}">
-          <input type="text" name="titulo" placeholder="Novo assunto…" aria-label="Novo assunto de ${U.esc(m.nome)}" required>
-          <button class="botao" type="submit">Adicionar</button>
-        </form>
-      </section>`;
+      <div class="estudar">
+        <a href="#assuntos" class="voltar-link">‹ Estudar</a>
+        <h1 class="estudar-h1"><span class="titulo-com-icone">${icone(m.id)}${U.esc(m.nome)}</span></h1>
+        ${seletorFase(estado, fase, true)}
+        ${proximo ? `<a class="botao primario estudar-continuar" href="#estudar/${U.esc(proximo.id)}">Continuar: ${U.esc(proximo.titulo)}</a>` : ''}
+        <section class="cartao">
+          <div class="materia-titulo">
+            <span class="selo ${itens.length && feitos === itens.length ? 'ok' : 'info'}">${feitos} de ${itens.length} estudados</span>
+            <button class="link-botao pequeno" data-acao="alternar-edicao">${editando ? 'Pronto' : 'Editar lista'}</button>
+          </div>
+          ${m.id === 'ingles' ? '<a class="pequeno" href="#ingles">Abrir a trilha de inglês (níveis, cartões e nivelamento) →</a>' : ''}
+          <ul class="lista-assuntos">${lis || '<li class="suave pequeno">Nenhum assunto desta matéria nesta fase.</li>'}</ul>
+          ${editando ? `<form class="form-inline" data-materia="${m.id}">
+            <input type="text" name="titulo" placeholder="Novo assunto…" aria-label="Novo assunto de ${U.esc(m.nome)}" required>
+            <button class="botao" type="submit">Adicionar</button>
+          </form>` : ''}
+        </section>
+        <a class="pequeno" href="#apostila/${U.esc(m.id)}">Ler como apostila (todas as fases) →</a>
+      </div>`;
   }
 
   function render(el, param) {
@@ -111,6 +153,7 @@ App.telas.assuntos = (function () {
     if (faseEscolhida === null) faseEscolhida = Math.min(3, Math.max(1, App.calc.faseAtual(estado)));
     const fase = faseEscolhida;
     const materia = param && D.materias.find((m) => m.id === param);
+    if (!materia) editando = false;
     if (materia) telaMateria(el, estado, fase, materia); else telaGrade(el, estado, fase);
 
     // Um único "ouvinte" para a tela toda (delegação de eventos)
@@ -120,6 +163,7 @@ App.telas.assuntos = (function () {
 
       const acao = ev.target.closest('[data-acao]');
       if (!acao) return;
+      if (acao.dataset.acao === 'alternar-edicao') { editando = !editando; render(el, param); return; }
       const li = acao.closest('li[data-id]');
       const assunto = li && estado.assuntos.find((a) => a.id === li.dataset.id);
       if (!assunto) return;
@@ -157,5 +201,5 @@ App.telas.assuntos = (function () {
     };
   }
 
-  return { render, titulo: 'Assuntos' };
+  return { render, titulo: 'Estudar' };
 })();

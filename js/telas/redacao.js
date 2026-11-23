@@ -146,5 +146,5 @@ App.telas.redacao = (function () {
     if (timerRascunho) { clearTimeout(timerRascunho); timerRascunho = null; App.store.salvar(); }
   }
 
-  return { render, sair, titulo: 'Redação' };
+  return { render, sair, titulo: 'Redação', aba: 'assuntos' };
 })();

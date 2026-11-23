@@ -269,7 +269,7 @@ App.telas.enem = (function () {
 
     el.innerHTML = `
       <section class="cartao">
-        <a href="#exercicios" class="pequeno">← Exercícios</a>
+        <a href="#simulados" class="pequeno">← Simulados</a>
         <h1 style="margin-top:.6rem">Simulado ENEM</h1>
         <p class="suave">A prova é a oficial do Inep: cada questão aparece aqui, recortada do caderno em PDF. Responda uma por vez:
           marque a letra <strong>com certeza</strong> ou <strong>no chute</strong>, veja a correta quando quiser e peça a explicação.
@@ -651,5 +651,5 @@ App.telas.enem = (function () {
     App.store.salvar();
   }
 
-  return { render, sair, titulo: 'Simulado ENEM', aba: 'exercicios', questoes, corrigir, pedidoExplicacao };
+  return { render, sair, titulo: 'Simulado ENEM', aba: 'simulados', questoes, corrigir, pedidoExplicacao };
 })();

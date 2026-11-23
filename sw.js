@@ -4,7 +4,7 @@
    Ao publicar uma versão nova, aumente o número de VERSAO
    para os aparelhos baixarem os arquivos atualizados.
    ========================================================= */
-const VERSAO = 'estudos-v37';
+const VERSAO = 'estudos-v39';
 const ARQUIVOS = [
   './',
   'index.html',
@@ -60,6 +60,7 @@ const ARQUIVOS = [
   'js/telas/ingles.js',
   'js/telas/vestibular.js',
   'js/telas/enem.js',
+  'js/telas/simulados.js',
   'js/app.js',
 ];
 

@@ -16,7 +16,7 @@ vm.createContext(contexto);
 ['js/util.js', 'js/dados/materias.js', 'js/dados/assuntos.js', 'js/dados/conteudos.js', 'js/dados/apoio.js', 'js/dados/checagens.js', 
  'js/dados/topicos/biologia.js', 'js/dados/topicos/historia.js', 'js/dados/topicos/geografia.js', 'js/dados/topicos/filosofia.js', 'js/dados/topicos/sociologia.js', 'js/dados/topicos/logica.js', 'js/dados/topicos/informatica.js', 'js/dados/topicos/administracao.js', 'js/dados/topicos/ingles.js', 'js/dados/topicos/agentes.js', 'js/dados/ingles-trilha.js', 'js/dados/planos-cursos.js',
  'js/dados/questoes.js', 'js/dados/dissertativas.js',
- 'js/dados/redacao.js', 'js/dados/plano-redacao.js', 'js/dados/vestibular.js', 'js/dados/simulados-enem.js', 'js/calculos.js', 'js/desenhos.js', 'js/componentes.js', 'js/caderno.js', 'js/telas/cursos.js', 'js/telas/ingles.js', 'js/telas/enem.js'].forEach((arq) => {
+ 'js/dados/redacao.js', 'js/dados/plano-redacao.js', 'js/dados/vestibular.js', 'js/dados/simulados-enem.js', 'js/calculos.js', 'js/desenhos.js', 'js/componentes.js', 'js/caderno.js', 'js/telas/cursos.js', 'js/telas/ingles.js', 'js/telas/enem.js', 'js/telas/simulados.js'].forEach((arq) => {
   vm.runInContext(fs.readFileSync(path.join(raiz, arq), 'utf8'), contexto, { filename: arq });
 });
 const App = contexto.App;

@@ -199,5 +199,5 @@ App.telas.plano = (function () {
       </section>`;
   }
 
-  return { render, sair: salvarPendente, cartaoResumo, titulo: 'Plano de redação', aba: 'redacao' };
+  return { render, sair: salvarPendente, cartaoResumo, titulo: 'Plano de redação', aba: 'assuntos' };
 })();

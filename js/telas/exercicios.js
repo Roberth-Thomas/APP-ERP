@@ -42,39 +42,57 @@ App.telas.exercicios = (function () {
     return { chave, titulo, fila, indice: 0, respondida: null, acertos: 0, erros: [], respondidas: [] };
   }
 
-  /* ---------- Tela inicial: lista de matérias ---------- */
+  /* ---------- Tela inicial (aba Praticar): simulado da semana, matérias e provas (ENEM fica na aba Simulados) ---------- */
+  const ICONES_PRATICAR = {
+    certo: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="m8 12 3 3 5-6"/>',
+    prova: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+    mais: '<path d="M12 5v14M5 12h14"/>'
+  };
+
+  /** Linha de lista (mesmo desenho das telas Hoje e Estudar) */
+  function linhaPraticar(ic, titulo, sub, href, direita) {
+    return `
+      <li class="tarefa"><a href="${href}">
+        <span class="tarefa-icone"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONES_PRATICAR[ic]}</svg></span>
+        <span class="tarefa-texto"><strong>${titulo}</strong>${sub ? `<small>${sub}</small>` : ''}</span>
+        ${direita || ''}<span class="tarefa-seta" aria-hidden="true">›</span>
+      </a></li>`;
+  }
+
   function telaInicio(el) {
     const estado = App.store.get();
     const todas = App.calc.todasQuestoes(estado);
+    const nomesSemana = D.materiasDaSemana().map((id) => D.materia(id).nome);
     // Curso livre sem questões ainda (ex.: Agentes de IA) fica fora da lista até ganhar questões
-    const linhas = D.materias.filter((m) => m.tipo !== 'curso' || todas.some((q) => q.materia === m.id)).map((m) => {
+    const materias = D.materias.filter((m) => m.tipo !== 'curso' || todas.some((q) => q.materia === m.id)).map((m) => {
       const r = estado.respostas[m.id] || { acertos: 0, total: 0 };
       const qtd = todas.filter((q) => q.materia === m.id).length;
       const pct = U.porcentagem(r.acertos, r.total);
-      const indice = r.total ? `${pct}% de acertos (${r.acertos}/${r.total})` : 'Ainda sem respostas';
-      return `
-        <a class="cartao linha entre" href="#exercicios/${m.id}" style="text-decoration:none;color:inherit">
-          <div>
-            <strong>${U.esc(m.nome)}</strong>
-            <div class="suave pequeno">${qtd} questões · ${indice}</div>
-          </div>
-          <span class="botao pequeno">Praticar</span>
-        </a>`;
+      const selo = r.total ? `<span class="selo ${pct >= 70 ? 'ok' : 'info'}">${pct}%</span>` : '';
+      return linhaPraticar('certo', U.esc(m.nome), `${qtd} questões${r.total ? ` · ${r.acertos} de ${r.total} certas` : ''}`,
+        '#exercicios/' + m.id, selo);
     }).join('');
 
     el.innerHTML = `
-      <section class="cartao">
-        <h1>Exercícios</h1>
-        <p class="suave">Escolha uma matéria. As questões vêm embaralhadas e a correção é na hora.</p>
-        <div class="linha">
-          <a class="botao primario" href="#exercicios/simulado">Simulado (${TAMANHO_SIMULADO} questões da semana)</a>
-          <a class="botao" href="#provas">Provas</a>
-          <a class="botao" href="#enem">Simulado ENEM</a>
-          <a class="botao" href="#vestibular">Questões do ENEM</a>
-          <a class="botao" href="#exercicios/nova">Cadastrar questão</a>
-        </div>
-      </section>
-      <div class="grade grade-2">${linhas}</div>`;
+      <div class="estudar">
+        <h1 class="estudar-h1">Praticar</h1>
+
+        <section class="cartao destaque hoje-topo">
+          <div class="hoje-data">${TAMANHO_SIMULADO} questões, correção na hora</div>
+          <h2 style="margin:.2rem 0">Simulado da semana</h2>
+          <p class="hoje-sub">${U.esc(nomesSemana.slice(0, 3).join(', '))}${nomesSemana.length > 3 ? ` e mais ${nomesSemana.length - 3}` : ''}</p>
+          <a class="botao primario hoje-principal-botao" href="#exercicios/simulado">Começar</a>
+        </section>
+
+        <h2 class="hoje-titulo estudar-grupo">Por matéria</h2>
+        <ul class="tarefas cartao estudar-atalhos">${materias}</ul>
+
+        <h2 class="hoje-titulo estudar-grupo">Também</h2>
+        <ul class="tarefas cartao estudar-atalhos">
+          ${linhaPraticar('prova', 'Provas quinzenais', 'Uma a cada duas semanas, sem tempo', '#provas')}
+          ${linhaPraticar('mais', 'Cadastrar questão', 'Uma questão sua, de prova ou livro', '#exercicios/nova')}
+        </ul>
+      </div>`;
   }
 
   /* ---------- Responder perguntas (prática ou simulado) ---------- */
@@ -324,5 +342,5 @@ App.telas.exercicios = (function () {
   /** Plano de ação para qualquer lista de respostas (usado também pelas provas) */
   function planoDeAcaoHTML(respondidas) { return planoDeAcao({ respondidas }); }
 
-  return { render, planoDeAcaoHTML, titulo: 'Exercícios' };
+  return { render, planoDeAcaoHTML, titulo: 'Praticar' };
 })();

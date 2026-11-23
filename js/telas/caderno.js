@@ -326,5 +326,5 @@ App.telas.caderno = (function () {
     if (timerNota) { clearTimeout(timerNota); timerNota = null; App.store.salvar(); }
   }
 
-  return { render, sair, titulo: 'Caderno', aba: 'caderno' };
+  return { render, sair, titulo: 'Caderno', aba: 'assuntos' };
 })();

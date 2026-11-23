@@ -169,5 +169,5 @@ App.telas.config = (function () {
     };
   }
 
-  return { render, titulo: 'Configurações' };
+  return { render, titulo: 'Configurações', aba: 'progresso' };
 })();

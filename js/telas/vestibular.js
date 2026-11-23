@@ -66,7 +66,7 @@ App.telas.vestibular = (function () {
 
     el.innerHTML = `
       <section class="cartao">
-        <a href="#exercicios" class="pequeno">← Exercícios</a>
+        <a href="#simulados" class="pequeno">← Simulados</a>
         <h1 style="margin-top:.6rem">Questões do ENEM</h1>
         <a class="botao pequeno primario" href="#enem">Fazer a prova inteira como simulado</a>
         <p class="suave">Questões de provas reais. Abra a prova oficial do Inep, resolva a questão indicada e volte aqui para marcar a letra.
@@ -102,5 +102,5 @@ App.telas.vestibular = (function () {
   // Ao sair, as respostas da visita são esquecidas (o índice de acertos já foi gravado)
   function sair() { escolhas = {}; }
 
-  return { render, sair, titulo: 'Questões do ENEM', aba: 'exercicios' };
+  return { render, sair, titulo: 'Questões do ENEM', aba: 'simulados' };
 })();
