@@ -26,6 +26,8 @@
      notas: [{ id, titulo, texto (Markdown), assunto | null, pergunta?: "assunto/pergunta", criadaEm, atualizadaEm }],  // caderno (ver js/caderno.js)
      cursos: [{ id, nome, url, materia, criadoEm, aulas: [{ id, titulo, feita: "AAAA-MM-DD" | null }] }],  // cursos de fora (js/telas/cursos.js)
      ingles: { nivelamento: { data, porNivel, recomendado } | null, cartoes: { "b1-01:feature": { caixa, proxima: "AAAA-MM-DD" } } },  // trilha de inglês
+     enem: { atual: { sim, parte, lingua, respostas: { 6: 'B' }, segundos, inicio } | null,  // simulado ENEM (js/telas/enem.js)
+             feitos: [{ id, sim, parte, lingua, respostas, segundos, data: "AAAA-MM-DD" }] },
      rascunho: { tema, texto, checklist }
    }
    ========================================================= */
@@ -55,6 +57,7 @@ App.store = (function () {
       notas: [],
       cursos: [],
       ingles: { nivelamento: null, cartoes: {} },
+      enem: { atual: null, feitos: [] },
       rascunho: { tema: '', texto: '', checklist: {} },
     };
   }
@@ -91,6 +94,8 @@ App.store = (function () {
     if (!Array.isArray(e.cursos)) e.cursos = [];
     e.ingles = Object.assign({ nivelamento: null, cartoes: {} }, obj.ingles);
     if (typeof e.ingles.cartoes !== 'object' || !e.ingles.cartoes) e.ingles.cartoes = {};
+    e.enem = Object.assign({ atual: null, feitos: [] }, obj.enem);
+    if (!Array.isArray(e.enem.feitos)) e.enem.feitos = [];
     if (typeof e.diasConcluidos !== 'object' || !e.diasConcluidos) e.diasConcluidos = {};
     if (typeof e.respostas !== 'object' || !e.respostas) e.respostas = {};
     if (typeof e.desempenhoAssunto !== 'object' || !e.desempenhoAssunto) e.desempenhoAssunto = {};

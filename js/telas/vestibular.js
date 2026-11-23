@@ -68,6 +68,7 @@ App.telas.vestibular = (function () {
       <section class="cartao">
         <a href="#exercicios" class="pequeno">← Exercícios</a>
         <h1 style="margin-top:.6rem">Questões do ENEM</h1>
+        <a class="botao pequeno primario" href="#enem">Fazer a prova inteira como simulado</a>
         <p class="suave">Questões de provas reais. Abra a prova oficial do Inep, resolva a questão indicada e volte aqui para marcar a letra.
           As tirinhas e os textos ficam na prova, com os autores; aqui fica só o resumo e a dica.</p>
         <div class="linha">

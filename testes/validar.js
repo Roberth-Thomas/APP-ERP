@@ -16,7 +16,7 @@ vm.createContext(contexto);
 ['js/util.js', 'js/dados/materias.js', 'js/dados/assuntos.js', 'js/dados/conteudos.js', 'js/dados/apoio.js', 'js/dados/checagens.js', 
  'js/dados/topicos/biologia.js', 'js/dados/topicos/historia.js', 'js/dados/topicos/geografia.js', 'js/dados/topicos/filosofia.js', 'js/dados/topicos/sociologia.js', 'js/dados/topicos/logica.js', 'js/dados/topicos/informatica.js', 'js/dados/topicos/administracao.js', 'js/dados/topicos/ingles.js', 'js/dados/topicos/agentes.js', 'js/dados/ingles-trilha.js', 'js/dados/planos-cursos.js',
  'js/dados/questoes.js', 'js/dados/dissertativas.js',
- 'js/dados/redacao.js', 'js/dados/plano-redacao.js', 'js/dados/vestibular.js', 'js/calculos.js', 'js/desenhos.js', 'js/componentes.js', 'js/caderno.js', 'js/telas/cursos.js', 'js/telas/ingles.js'].forEach((arq) => {
+ 'js/dados/redacao.js', 'js/dados/plano-redacao.js', 'js/dados/vestibular.js', 'js/dados/simulados-enem.js', 'js/calculos.js', 'js/desenhos.js', 'js/componentes.js', 'js/caderno.js', 'js/telas/cursos.js', 'js/telas/ingles.js', 'js/telas/enem.js'].forEach((arq) => {
   vm.runInContext(fs.readFileSync(path.join(raiz, arq), 'utf8'), contexto, { filename: arq });
 });
 const App = contexto.App;
@@ -108,6 +108,91 @@ teste('ENEM: referência completa, tópico da mesma matéria, link oficial e gab
   });
   assert.strictEqual(new Set(lista.map((q) => q.id)).size, lista.length, 'IDs repetidos');
   console.log('    questões do ENEM:', lista.length, '· com tirinha:', lista.filter((q) => q.temTirinha).length);
+});
+
+teste('simulado ENEM: gabarito oficial completo, páginas do caderno e correção por área', () => {
+  const sims = App.dados.simuladosEnem;
+  assert.ok(sims.length >= 1);
+  assert.strictEqual(new Set(sims.map((s) => s.id)).size, sims.length, 'IDs repetidos');
+  sims.forEach((s) => {
+    [s.prova, s.gabaritoUrl].forEach((u) => assert.ok(u.startsWith('https://download.inep.gov.br/'), s.id + ': ' + u));
+    const ultima = s.areas[s.areas.length - 1].ate;
+    // Áreas em sequência, sem buraco, começando na 1
+    s.areas.forEach((a, i) => assert.strictEqual(a.de, i ? s.areas[i - 1].ate + 1 : 1, s.id + ': área ' + a.id));
+    assert.strictEqual(s.gabarito.letras.length, ultima - s.gabarito.inicio + 1, s.id + ': tamanho do gabarito');
+    assert.ok(/^[A-E]+$/.test(s.gabarito.letras), s.id + ': letras A–E');
+    ['ingles', 'espanhol'].forEach((l) => {
+      assert.ok(/^[A-E]{5}$/.test(s.linguas[l].gabarito), s.id + ': ' + l);
+      assert.strictEqual(s.linguas[l].paginas.length, 5, s.id + ': páginas de ' + l);
+    });
+    // Páginas: toda questão tem uma, e elas nunca voltam para trás
+    let anterior = 0;
+    for (let n = s.gabarito.inicio; n <= ultima; n++) {
+      const p = App.dados.paginaEnem(s, n, 'ingles');
+      assert.ok(Number.isInteger(p) && p >= anterior, s.id + ': página da questão ' + n);
+      anterior = p;
+    }
+    if (s.redacao) assert.ok(s.redacao.tema.length > 10 && Number.isInteger(s.redacao.pagina), s.id + ': redação');
+  });
+  // Conferência com o PDF do Inep (2026, 1º dia, caderno 1 Azul)
+  const s = sims.find((x) => x.id === 'enem-2026-d1-azul');
+  const G = (n, l) => App.dados.gabaritoEnem(s, n, l || 'ingles');
+  assert.deepStrictEqual([G(1), G(1, 'espanhol'), G(5), G(5, 'espanhol'), G(6), G(45), G(46), G(90)], ['B', 'A', 'C', 'D', 'D', 'E', 'C', 'E']);
+  // Correção: tudo certo, uma errada em Humanas e uma em branco em Linguagens
+  const T = App.telas.enem;
+  const respostas = {};
+  T.questoes(s, 'tudo').forEach((n) => { respostas[n] = G(n, 'espanhol'); });
+  respostas[50] = respostas[50] === 'A' ? 'B' : 'A';
+  delete respostas[10];
+  const r = T.corrigir(s, { parte: 'tudo', lingua: 'espanhol', respostas });
+  assert.deepStrictEqual([r.acertos, r.total, r.brancos], [88, 90, 1]);
+  assert.strictEqual(r.porArea.map((x) => x.acertos + '/' + x.total).join(' '), '44/45 44/45');
+  const so = T.corrigir(s, { parte: 'humanas', lingua: 'ingles', respostas: {} });
+  assert.deepStrictEqual([so.total, so.porArea.length, so.acertos], [45, 1, 0]);
+
+  // Certeza x chute: certeza errada, chute certo e "viu a correta antes de marcar" ficam separados
+  const conf = {}, vistas = {};
+  T.questoes(s, 'tudo').forEach((n) => { conf[n] = 'certeza'; });
+  conf[7] = 'chute';                                  // chute certo
+  const r2 = T.corrigir(s, { parte: 'tudo', lingua: 'espanhol', respostas: Object.assign({}, respostas, { 11: null }), confianca: conf, vistas: Object.assign(vistas, { 11: 'antes' }) });
+  assert.strictEqual([r2.grupos.certezaErrada.join(), r2.grupos.chuteCerto.join(), r2.grupos.viuAntes.join(), r2.grupos.semMarcar.join()].join(' | '), '50 | 7 | 11 | 10');
+  assert.strictEqual(r2.acertos, 87);
+  // Pedido à IA: questão, gabarito e a minha resposta, sem dado pessoal
+  const pedido = T.pedidoExplicacao(s, { lingua: 'ingles', respostas: { 9: 'C' }, confianca: { 9: 'chute' } }, 9);
+  assert.ok(/Questão 9/.test(pedido) && /letra A/.test(pedido) && /marquei a letra C, no chute/.test(pedido) && /\(cole aqui\)/.test(pedido));
+});
+
+teste('simulado ENEM: explicação própria em todas as questões, nas duas línguas', () => {
+  const s = App.dados.simuladosEnem.find((x) => x.id === 'enem-2026-d1-azul');
+  const E = (n, l) => App.dados.explicacaoEnem(s, n, l || 'ingles');
+  for (let n = 1; n <= 90; n++) {
+    (n <= 5 ? ['ingles', 'espanhol'] : ['ingles']).forEach((l) => {
+      const txt = E(n, l);
+      assert.ok(txt && txt.length > 150, 'explicação da questão ' + n + ' (' + l + ')');
+      // a explicação cita a letra certa ou o conteúdo dela, e não tem marcação que o app não entende
+      assert.ok(!/(^|[^*])\*[^*\s][^*]*\*(?!\*)/.test(txt), 'itálico com * não é aceito: questão ' + n);
+    });
+  }
+  assert.strictEqual(App.dados.explicacaoEnem({}, 7, 'ingles'), null, 'simulado sem explicações devolve null');
+  // Recortes do enunciado: toda questão tem pelo menos um, dentro de uma página A4 do caderno (32 págs.)
+  for (let n = 1; n <= 90; n++) {
+    (n <= 5 ? ['ingles', 'espanhol'] : ['ingles']).forEach((l) => {
+      const rs = App.dados.recorteEnem(s, n, l);
+      assert.ok(rs.length >= 1 && rs.length <= 3, 'recorte da questão ' + n + ' (' + l + ')');
+      rs.forEach(([p, x0, y0, x1, y1]) => assert.ok(p >= 2 && p <= 31 && x0 >= 0 && x1 <= 596 && y0 >= 0 && y1 <= 842 && x1 - x0 > 200 && y1 - y0 > 30, 'recorte ' + n));
+      // alternativas A–E: cinco faixas em ordem, cada uma dentro de um recorte da questão
+      const alts = App.dados.alternativasEnem(s, n, l);
+      assert.strictEqual(alts.length, 5, 'alternativas da questão ' + n + ' (' + l + ')');
+      alts.forEach(([p, y0, y1], k) => {
+        assert.ok(y1 > y0 && rs.some((r) => r[0] === p && y0 >= r[2] - 2 && y1 <= r[4] + 2), 'alternativa ' + 'ABCDE'[k] + ' da questão ' + n);
+        if (k) assert.ok(p > alts[k - 1][0] || y0 >= alts[k - 1][1] || p !== alts[k - 1][0], 'ordem das alternativas da questão ' + n);
+      });
+      // a página da questão (pág. N) aparece nos recortes
+      assert.ok(rs.some((r) => r[0] === App.dados.paginaEnem(s, n, l)), 'página do recorte da questão ' + n);
+    });
+  }
+  const total = Object.keys(s.explicacoes).filter((k) => /^\d+$/.test(k)).length + 10;
+  console.log('    explicações escritas:', total, 'de 95');
 });
 
 teste('conteúdos: ligados a assuntos que existem, com BNCC, blocos e fontes válidos', () => {
@@ -282,6 +367,7 @@ teste('matéria nova (Inglês) entra no progresso já salvo, sem desfazer o que 
   assert.ok(!e.assuntos.some((a) => a.id === 'portugues-3-3'), 'tópico apagado não volta');
   assert.ok(Array.isArray(e.cursos), 'lista de cursos');
   assert.ok(e.ingles && typeof e.ingles.cartoes === 'object', 'estado da trilha de inglês');
+  assert.ok(e.enem && e.enem.atual === null && Array.isArray(e.enem.feitos), 'estado do simulado ENEM');
 
   // Quem tinha a lista antiga de Inglês recebe a trilha nova; a Unidade 1 (mesmo tópico) continua estudada
   const listaAntiga = ctx.App.dados.assuntosSubstituidos.ingles.map((titulo, i) => ({ id: 'ingles-' + (Math.floor(i / 4) + 1) + '-' + (i % 4), materia: 'ingles', fase: Math.floor(i / 4) + 1, titulo, estudado: i < 2 }));

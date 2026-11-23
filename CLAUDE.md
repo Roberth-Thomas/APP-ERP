@@ -1,16 +1,46 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # EstudosAPP — regras do projeto
 
 App de estudos (ensino médio + concurso + redação) para um adulto de 26 anos.
-JS puro (sem módulos, sem build), namespace global `window.App`, localStorage, PWA no GitHub Pages.
+JS puro (sem módulos, sem build, sem npm), namespace global `window.App`, localStorage, PWA.
+Publicado no Cloudflare Pages (https://estudos-rt.pages.dev), que publica sozinho a cada push na `main` (repositório privado).
 O celular é o aparelho principal. Interface e comentários do código em pt-BR.
 
 **Não mexer no projeto Bolt.** Este projeto é individual.
+
+## Comandos
+- Testes (todos): `node testes/validar.js`. É um script único, sem framework: cada `teste('nome', fn)` roda em ordem e o primeiro `assert` que falha para tudo.
+  Não há filtro por nome; para isolar um teste, comente os outros temporariamente. Os testes da entrada também rodam sozinhos: `node testes/acesso.mjs`.
+- Servidor local sem cache: `python .claude/servidor.py 8080 .` (ou `preview_start` com o nome `estudos`, em `.claude/launch.json`).
+- Conferir a versão publicada sem login: `curl -s https://estudos-rt.pages.dev/sw.js | grep VERSAO`.
+
+## Arquitetura
+- **Ordem dos scripts importa.** `index.html` carrega tudo com `<script>` em sequência: `util.js` → dados (`js/dados/*`, `topicos/*`)
+  → `armazenamento.js`/`calculos.js` → `componentes.js`/`caderno.js` → `nuvem.js` → telas → `app.js` por último. Os dados se juntam por
+  `Object.assign(App.dados.conteudos, {...})`, então um arquivo de tópico precisa vir depois de `conteudos.js`.
+- **Roteador por hash** (`js/app.js`): `#nome/param` chama `App.telas[nome].render(el, param)`; a tela pode ter `sair()` (salvar pendências),
+  `titulo` e `aba` (qual aba acende). Cada tela registra os ouvintes em `el.onclick/onchange/...`, que o roteador zera ao trocar de tela.
+- **Estado único** em `App.store` (`js/armazenamento.js`): um objeto salvo em `localStorage['estudosapp:estado']`. Altere o objeto de
+  `App.store.get()` e chame `App.store.salvar()`. `normalizar()` completa campos que faltam e acrescenta matérias novas; ao criar um campo
+  novo no estado, inclua-o em `estadoInicial()` e em `normalizar()`. `js/nuvem.js` sincroniza esse estado com o Google Drive.
+- **Assuntos**: `js/dados/assuntos.js` gera os ids `materia-fase-índice` (ex.: `ingles-1-0`); o conteúdo de estudo usa o mesmo id como chave.
+  Mudar a ordem ou o título de uma lista já publicada quebra o progresso salvo (use `assuntosSubstituidos` para migrar).
+- **Leitura** (`js/telas/estudar.js`): desenha os blocos do conteúdo (`etapa`, `texto`, `pergunta`, `checagem`, `tabela`, `codigo`, `escuta`...).
+  Bloco novo exige um `case` em `bloco()` e o tipo na lista `tipos` de `testes/validar.js`.
+- **Service worker** (`sw.js`): rede primeiro, cache só como reserva sem internet. `VERSAO` do `sw.js` e `VERSAO_PAGINA` do `index.html`
+  andam juntas (o teste confere); a página apaga a cópia velha quando elas diferem. `/limpar` é a página de socorro que apaga a cópia offline.
+- **Entrada**: `functions/_middleware.js` (Cloudflare Pages Function) protege todo o site. Só `PUBLICOS` (`js/acesso.js`, `sw.js`, `limpar`)
+  passam sem login; `/_acesso/*` são as rotas de entrada.
 
 ## Como trabalhar
 - **Um tópico por vez.** Refaça, mostre no navegador e espere a aprovação antes de seguir.
 - Commit e push só quando o usuário pedir (ele diz "faça o commit e envie para o GitHub").
 - Antes de commitar: `node testes/validar.js` (todos devem passar).
-- Ao adicionar arquivo novo: incluir em `index.html` (ordem dos scripts) e em `sw.js` (`ARQUIVOS`), e subir `VERSAO`.
+- Ao adicionar arquivo novo: incluir em `index.html` (ordem dos scripts), em `sw.js` (`ARQUIVOS`) e na lista de `testes/validar.js`.
+  A cada publicação, subir `VERSAO` (sw.js) e `VERSAO_PAGINA` (index.html) juntas.
 - Não pensar em Kindle/e-reader agora. Primeiro fazer funcionar no celular e no PC.
 - Teste local: servidor sem cache na porta 8080 (configuração em `.claude/launch.json`).
 - Não sujar o progresso do usuário (localStorage) em testes. Se mexer, restaure.
@@ -36,6 +66,9 @@ O celular é o aparelho principal. Interface e comentários do código em pt-BR.
 
 ## Próximos passos
 1. Preencher as questões reais do ENEM (`js/dados/vestibular.js`, hoje vazio), conferindo cada uma no PDF e no gabarito do Inep.
+   Provas inteiras como simulado ficam em `js/dados/simulados-enem.js` (só gabarito, páginas e tema da redação; o caderno é o PDF do Inep)
+   e na tela `#enem` (js/telas/enem.js). Já entrou: 2026, 1º dia, caderno Azul, interativo (certeza/chute/ver a correta/por quê).
+   Explicações próprias conferidas nas 90 questões (e nas duas línguas). Falta o 2º dia, quando o arquivo estiver disponível.
 2. Os demais tópicos de cada matéria, um por vez, com auditoria antes de mostrar.
 
 ## Correção por IA
