@@ -466,7 +466,16 @@ App.dados.gabaritoEnem = function (sim, numero, lingua) {
 /** Recortes do caderno onde está o enunciado da questão (ou [] se não houver) */
 App.dados.recorteEnem = function (sim, numero, lingua) {
   const r = sim.recortes || {};
-  return (numero <= 5 ? (r[lingua] || [])[numero - 1] : r[numero]) || [];
+  const rects = (numero <= 5 ? (r[lingua] || [])[numero - 1] : r[numero]) || [];
+  // O recorte termina logo depois da alternativa E (sem o branco até o pé da coluna)
+  const alts = App.dados.alternativasEnem(sim, numero, lingua);
+  const ultima = alts[alts.length - 1];
+  if (!ultima) return rects;
+  return rects.map((rect) => {
+    const [pag, x0, y0, x1, y1] = rect;
+    if (pag !== ultima[0] || ultima[2] < y0 || ultima[2] > y1 + 2) return rect;
+    return [pag, x0, y0, x1, Math.min(y1, ultima[2] + 4)];
+  });
 };
 
 /** Faixas das alternativas A a E da questão ([] se não houver) */
