@@ -872,3 +872,17 @@ a.sumario-item:hover { background: var(--primaria-suave); }
 .eu-ritmo { grid-column: 1 / -1; margin: 6px 0 0; display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; }
 .tarefa-info > div { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 12px 0; min-height: 56px; }
 .tarefa-info .tarefa-icone { opacity: .6; }
+
+/* ---------- Simulado ENEM: lupa no enunciado e leitura ampliada ---------- */
+.enem-recorte canvas { cursor: zoom-in; }
+.enem-ampliar { position: absolute; top: 6px; right: 6px; z-index: 2; width: 40px; height: 40px; border-radius: 50%;
+  display: grid; place-items: center; border: 1px solid var(--borda); background: var(--superficie); color: var(--primaria);
+  box-shadow: var(--sombra); cursor: pointer; padding: 0; }
+.enem-ampliar svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+html.sem-rolagem, html.sem-rolagem body { overflow: hidden; }
+.enem-leitura { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; background: var(--fundo); }
+.enem-leitura-barra { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+  padding: 10px 12px calc(10px); padding-top: calc(10px + env(safe-area-inset-top)); background: var(--superficie); border-bottom: 1px solid var(--borda); }
+.enem-leitura-zoom { min-width: 2.5rem; text-align: center; font-weight: 600; }
+.enem-leitura-area { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; background: #fff; padding-bottom: env(safe-area-inset-bottom); }
+.enem-leitura-area canvas { display: block; max-width: none; }

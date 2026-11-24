@@ -69,6 +69,18 @@ App.telas.enem = (function () {
       const caixa = document.createElement('div');
       caixa.className = 'enem-recorte';
       caixa.appendChild(canvas);
+      const lupa = document.createElement('button');
+      lupa.type = 'button';
+      lupa.className = 'enem-ampliar';
+      lupa.setAttribute('aria-label', 'Ampliar o enunciado');
+      lupa.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M11 8v6M8 11h6"/></svg>';
+      caixa.appendChild(lupa);
+      // Toque no texto (fora das alternativas) ou na lupa: abre a leitura ampliada
+      caixa.addEventListener('click', (ev) => {
+        if (ev.target.closest('.enem-alt')) return;
+        ev.stopPropagation();
+        abrirLeitura(sim, n, lingua);
+      });
       alts.forEach(([p, y0, y1], k) => {
         if (p !== pag || y0 < ry0 - 2 || y1 > ry1 + 2) return; // alternativa de outro recorte
         const l = LETRAS[k];
@@ -132,6 +144,101 @@ App.telas.enem = (function () {
           Use o link "Abrir no caderno" acima.</p>`;
       }
     }
+  }
+
+  /* ---------- Leitura ampliada: o enunciado em tela cheia, maior e com rolagem ----------
+     Redesenha do PDF numa largura maior (não estica a imagem pequena), então a letra fica nítida.
+     O botão "voltar" do celular fecha a leitura em vez de sair da prova. */
+  const ZOOMS = [1, 1.5, 2, 2.5, 3];
+  let zoomLeitura = 1;     // posição em ZOOMS (começa em 1,5×), lembrada enquanto o app está aberto
+  let leituraAberta = null;
+
+  function fecharLeitura(peloVoltar) {
+    if (!leituraAberta) return;
+    leituraAberta.remove();
+    leituraAberta = null;
+    document.documentElement.classList.remove('sem-rolagem');
+    window.removeEventListener('keydown', teclaLeitura);
+    if (!peloVoltar && history.state && history.state.leituraEnem) history.back();
+  }
+  function teclaLeitura(ev) { if (ev.key === 'Escape') fecharLeitura(); }
+  if (typeof window.addEventListener === 'function') {
+    window.addEventListener('popstate', () => { if (leituraAberta) fecharLeitura(true); });
+  }
+
+  async function desenharLeitura(area, sim, n, lingua) {
+    const rects = D.recorteEnem(sim, n, lingua);
+    const larguraCss = Math.round(window.innerWidth * ZOOMS[zoomLeitura]);
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    area.innerHTML = '<p class="suave pequeno" style="padding:16px">Carregando…</p>';
+    try {
+      const pdf = await abrirPdf(sim.prova);
+      const canvases = [];
+      for (const [pag, x0, y0, x1, y1] of rects) {
+        const pagina = await pdf.getPage(pag);
+        let escala = (larguraCss * dpr) / (x1 - x0);
+        // Celulares recusam canvas gigante: limita a ~12 milhões de pixels (a letra continua nítida)
+        const pixels = (x1 - x0) * (y1 - y0) * escala * escala;
+        if (pixels > 12e6) escala *= Math.sqrt(12e6 / pixels);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round((x1 - x0) * escala);
+        canvas.height = Math.round((y1 - y0) * escala);
+        canvas.style.width = larguraCss + 'px';
+        canvas.setAttribute('role', 'img');
+        canvas.setAttribute('aria-label', `Questão ${n} ampliada, página ${pag} do caderno oficial`);
+        await pagina.render({
+          canvasContext: canvas.getContext('2d'),
+          viewport: pagina.getViewport({ scale: escala }),
+          transform: [1, 0, 0, 1, -x0 * escala, -y0 * escala],
+        }).promise;
+        canvases.push(canvas);
+      }
+      if (area.isConnected) area.replaceChildren(...canvases);
+    } catch (e) {
+      if (area.isConnected) area.innerHTML = '<p class="suave pequeno" style="padding:16px">Não consegui abrir o caderno agora (está sem internet?).</p>';
+    }
+  }
+
+  function abrirLeitura(sim, n, lingua) {
+    fecharLeitura(true);
+    const tela = document.createElement('div');
+    tela.className = 'enem-leitura';
+    tela.setAttribute('role', 'dialog');
+    tela.setAttribute('aria-modal', 'true');
+    tela.setAttribute('aria-label', 'Questão ' + n + ' ampliada');
+    tela.innerHTML = `
+      <div class="enem-leitura-barra">
+        <strong>Questão ${n}</strong>
+        <span class="linha" style="gap:6px">
+          <button type="button" class="botao pequeno" data-zoom="-1" aria-label="Diminuir">A−</button>
+          <span class="enem-leitura-zoom" aria-live="polite"></span>
+          <button type="button" class="botao pequeno" data-zoom="1" aria-label="Aumentar">A+</button>
+          <button type="button" class="botao pequeno primario" data-fechar>Fechar</button>
+        </span>
+      </div>
+      <div class="enem-leitura-area"></div>`;
+    document.body.appendChild(tela);
+    leituraAberta = tela;
+    document.documentElement.classList.add('sem-rolagem');
+    window.addEventListener('keydown', teclaLeitura);
+    history.pushState({ leituraEnem: true }, '', location.href);
+
+    const area = tela.querySelector('.enem-leitura-area');
+    const atualizar = () => {
+      tela.querySelector('.enem-leitura-zoom').textContent = ZOOMS[zoomLeitura].toLocaleString('pt-BR') + '×';
+      tela.querySelector('[data-zoom="-1"]').disabled = zoomLeitura === 0;
+      tela.querySelector('[data-zoom="1"]').disabled = zoomLeitura === ZOOMS.length - 1;
+      desenharLeitura(area, sim, n, lingua);
+    };
+    tela.addEventListener('click', (ev) => {
+      if (ev.target.closest('[data-fechar]')) { fecharLeitura(); return; }
+      const z = ev.target.closest('[data-zoom]');
+      if (!z) return;
+      zoomLeitura = Math.max(0, Math.min(ZOOMS.length - 1, zoomLeitura + Number(z.dataset.zoom)));
+      atualizar();
+    });
+    atualizar();
+    tela.querySelector('[data-fechar]').focus();
   }
 
   function simulado(id) { return D.simuladosEnem.find((s) => s.id === id); }
@@ -644,6 +751,7 @@ App.telas.enem = (function () {
 
   /** Ao sair da tela: guarda o tempo e para o relógio */
   function sair() {
+    fecharLeitura(true);
     acumular();
     inicioTrecho = null;
     selecionada = null;
