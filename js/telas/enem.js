@@ -69,13 +69,8 @@ App.telas.enem = (function () {
       const caixa = document.createElement('div');
       caixa.className = 'enem-recorte';
       caixa.appendChild(canvas);
-      const lupa = document.createElement('button');
-      lupa.type = 'button';
-      lupa.className = 'enem-ampliar';
-      lupa.setAttribute('aria-label', 'Ampliar o enunciado');
-      lupa.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M11 8v6M8 11h6"/></svg>';
-      caixa.appendChild(lupa);
-      // Toque no texto (fora das alternativas) ou na lupa: abre a leitura ampliada
+      // Toque no texto (fora das alternativas): abre a leitura ampliada
+      canvas.setAttribute('aria-label', canvas.getAttribute('aria-label').replace(/ · toque para ampliar$/, '') + ' · toque para ampliar');
       caixa.addEventListener('click', (ev) => {
         if (ev.target.closest('.enem-alt')) return;
         ev.stopPropagation();
@@ -454,7 +449,7 @@ App.telas.enem = (function () {
           <h2 style="margin:0">Questão ${num(n)}</h2>
           ${linkPagina(sim, n, s.lingua, 'Abrir no caderno (pág. ' + D.paginaEnem(sim, n, s.lingua) + ') ↗')}
         </div>
-        <div class="suave pequeno">${U.esc(area.curto)}${n <= 5 ? ' · ' + LINGUAS[s.lingua] : ''} · toque na alternativa para escolher</div>
+        <div class="suave pequeno">${U.esc(area.curto)}${n <= 5 ? ' · ' + LINGUAS[s.lingua] : ''} · toque na alternativa para escolher ou no texto para ampliar</div>
         <div class="enem-enunciado" data-enunciado="${n}"></div>
         <div class="enem-letras grande" role="group" aria-label="Alternativas">${letras}</div>
         <p class="pequeno" style="margin:.2rem 0 .6rem">${situacao}</p>
